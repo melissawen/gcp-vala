@@ -1,11 +1,12 @@
-using Gtk;
+using Gtk, Vala;
 
 namespace Gcp.Vala{
-  public class Diagnostic : Vala.Report {
-    public weak SourceView source_view { private set; get; }
+  public class Diagnostic : Report {
+    public weak GtkSource.View source_view { private set; get; }
     private Gcp.SourceIndex diags;
+    private Gcp.SourceLocation loc;
     
-    public Diagnostic (SourceView source_view) {
+    public Diagnostic (GtkSource.View source_view) {
       this.source_view = source_view;
     }
     
@@ -13,46 +14,62 @@ namespace Gcp.Vala{
       this.diags = diags;
     }
     
-    public override void note (Vala.SourceReference? source, string message) {
+    public override void note (SourceReference? source, string message) {
       if (!enable_warnings) { return; }
       if (source != null){
-        diags.add(new Gcp.Diagnostic(Gcp.DiagnosticSeverity.WARNING,
-                                         source.get_begin(),
-                                         new SourceRange(),
-                                         new Fixit(),
+        string? filename = source.file.filename;
+		    File? sfile = filename != null ? File.new_for_path(filename) : null;
+		    
+        loc = new Gcp.SourceLocation(sfile, source.begin.line, source.begin.column);
+        diags.add(new Gcp.Diagnostic(Gcp.Diagnostic.Severity.WARNING,
+                                         loc,
+                                         new Gcp.SourceRange[1],
+                                         new Gcp.Diagnostic.Fixit[1],
                                          message));
       }
     }
     
-    public override void depr (Vala.SourceReference? source, string message) {
+    public override void depr (SourceReference? source, string message) {
       if (!enable_warnings) { return; }
       if (source != null){
-        diags.add(new Gcp.Diagnostic(Gcp.DiagnosticSeverity.WARNING,
-                                         source.get_begin(),
-                                         new SourceRange(),
-                                         new Fixit(),
+        string? filename = source.file.filename;
+		    File? sfile = filename != null ? File.new_for_path(filename) : null;
+		    
+        loc = new Gcp.SourceLocation(sfile, source.begin.line, source.begin.column);
+        diags.add(new Gcp.Diagnostic(Gcp.Diagnostic.Severity.WARNING,
+                                         loc,
+                                         new Gcp.SourceRange[1],
+                                         new Gcp.Diagnostic.Fixit[1],
                                          message));
       }
     }
     
-    public override void warn (Vala.SourceReference? source, string message) {
+    public override void warn (SourceReference? source, string message) {
       if (!enable_warnings) { return; }
       if (source != null){
-        diags.add(new Gcp.Diagnostic(Gcp.DiagnosticSeverity.WARNING,
-                                         source.get_begin(),
-                                         new SourceRange(),
-                                         new Fixit(),
+        string? filename = source.file.filename;
+		    File? sfile = filename != null ? File.new_for_path(filename) : null;
+		    
+        loc = new Gcp.SourceLocation(sfile, source.begin.line, source.begin.column);
+        diags.add(new Gcp.Diagnostic(Gcp.Diagnostic.Severity.WARNING,
+                                         loc,
+                                         new Gcp.SourceRange[1],
+                                         new Gcp.Diagnostic.Fixit[1],
                                          message));
       }
     }
     
-    public override void err (Vala.SourceReference? source, string message) {
+    public override void err (SourceReference? source, string message) {
       if (!enable_warnings) { return; }
       if (source != null){
-        diags.add(new Gcp.Diagnostic(Gcp.DiagnosticSeverity.ERROR,
-                                         source.get_begin(),
-                                         new SourceRange(),
-                                         new Fixit(),
+        string? filename = source.file.filename;
+		    File? sfile = filename != null ? File.new_for_path(filename) : null;
+		    
+        loc = new Gcp.SourceLocation(sfile, source.begin.line, source.begin.column);
+        diags.add(new Gcp.Diagnostic(Gcp.Diagnostic.Severity.WARNING,
+                                         loc,
+                                         new Gcp.SourceRange[1],
+                                         new Gcp.Diagnostic.Fixit[1],
                                          message));
       }
     }       
@@ -62,8 +79,10 @@ namespace Gcp.Vala{
     private string? source_file;
     private string? source_contents;
     private Diagnostic reporter;
+    private Gedit.Document doc;
     
     public ParseThread(Gcp.Document doc){
+      this.doc = doc.document;
       if (doc.location != null){
 			  this.source_file = doc.location.get_path();
 		  }
@@ -72,31 +91,29 @@ namespace Gcp.Vala{
 		    this.source_file = "<unknown>";
 		  }
 		  
+		  this.source_file = null;
+		  
 		  TextIter start;
 		  TextIter end;
 
-		  doc.get_bounds(out start, out end);
-		  this.source_contents = d_doc.get_text(start, end, true);
+		  this.doc.get_bounds(out start, out end);
+		  this.source_contents = this.doc.get_text(start, end, true);
     }
-    
-    construct{
-      this.source_file = null;
-    }
-    
     
     public async void start_parse_thread(){
       ThreadFunc<void *> run = () => {
-        Vala.CodeContext context = new Vala.CodeContext ();
+        CodeContext context = new CodeContext ();
         context.report = reporter;
-        Vala.CodeContext.push (context);
+        CodeContext.push (context);
       
-        Vala.SourceFile vala_sf = new Vala.SourceFile (context, this.source_file, true);
+        SourceFile vala_sf = new SourceFile (context, SourceFileType.SOURCE, this.source_file, this.source_contents, true);
         context.add_source_file (vala_sf);
       
-        Vala.Parser ast = new Vala.Parser();
+        Parser ast = new Parser();
         ast.parse(context);
         
-        Vala.CodeContext.pop ();
+        CodeContext.pop ();
+        return null;
 		  };
 		  try
 		  {
@@ -112,7 +129,7 @@ namespace Gcp.Vala{
     private SourceIndex d_diagnostics;
     private Mutex d_diagnosticsLock;
     private uint reparse_timeout;
-    private ParserThread reparse_thread;
+    private ParseThread reparse_thread;
     
     public Document(Gedit.Document document){
 		  Object(document: document);

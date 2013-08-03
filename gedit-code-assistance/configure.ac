@@ -211,12 +211,7 @@ fi
 
 AM_CONDITIONAL(XML_ENABLED, test x"$enable_xml" = "xyes")
 
-if test "x$enable_vala" = "xauto"; then
-	PKG_CHECK_EXISTS([libvala-0.20 >= 0.20],
-	                 [enable_xml=yes],[enable_xml=no])
-fi
-
-AM_CONDITIONAL(VALA_ENABLED, test x"$enable_xml" = "xyes")
+PKG_CHECK_MODULES(VALA_ENABLED, [	libvala-0.20 >= 0.20 ])
 
 AC_CONFIG_FILES([
 Makefile
