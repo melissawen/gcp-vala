@@ -19,7 +19,8 @@ valapkgs = 			\
 	gtksourceview-3.0 	\
 	gedit-3.0 		\
 	libpeas-1.0 		\
-	config
+	config 		\
+	libvala-0.22
 
 AM_VALAFLAGS = \
 	--vapidir $(top_srcdir)/src \
