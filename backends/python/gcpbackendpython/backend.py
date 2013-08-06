@@ -29,13 +29,11 @@ class Backend(GObject.Object, Gcp.Backend):
     def do_get_property(self, spec):
         if spec.name == 'size':
             return len(self.documents)
-
         GObject.Object.do_get_property(self, spec)
 
     def do_register_document(self, doc):
         d = Document(document=doc)
         self.documents.append(d)
-
         d.connect('changed', self.on_document_changed)
         return d
 

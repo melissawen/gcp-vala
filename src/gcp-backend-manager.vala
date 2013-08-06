@@ -85,6 +85,7 @@ class BackendManager
 			foreach (string lang in langs.split(","))
 			{
 				d_backends[lang] = binfo;
+				stdout.printf("%s\n", lang);
 			}
 		}
 	}
